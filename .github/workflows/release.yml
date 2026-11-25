@@ -1,0 +1,63 @@
+name: Release Windows Executable
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Ensure FFmpeg is available for tests
+        shell: powershell
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg --no-progress -y
+          }
+
+      - name: Run tests before packaging
+        shell: powershell
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest discover -s tests -v
+
+      - name: Build PhotoBox.exe
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
+
+      - name: Verify built executable
+        shell: powershell
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          $p = Start-Process -FilePath '.\dist\PhotoBox.exe' -ArgumentList '--self-check' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0) {
+            throw "PhotoBox.exe self-check failed with exit code $($p.ExitCode)"
+          }
+
+      - name: Publish GitHub Release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" "dist\PhotoBox.exe" `
+            --title "PhotoBox ${{ github.ref_name }}" `
+            --generate-notes
