@@ -1,0 +1,21 @@
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# PyInstaller build outputs
+build/
+dist/
+*.spec
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+*.log
