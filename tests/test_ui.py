@@ -160,19 +160,31 @@ class PhotoBoxUITests(unittest.TestCase):
         anim.animate_to(1.0, duration_ms=0, on_value=seen.append)
         self.assertEqual(seen[-1], 1.0)
 
-        seen.clear()
-        anim.animate_to(
-            0.0,
-            duration_ms=120,
-            start_from=1.0,
-            on_value=seen.append,
-            on_done=lambda: done_calls.append(1),
-        )
-        before_stop = len(seen)
-        anim.stop_silent(1.0)
-        self.assertEqual(len(seen), before_stop)
-        self.assertEqual(done_calls, [])
-        self.assertEqual(anim.current_float, 1.0)
+        with patch("ui.motion.prefers_reduced_motion", return_value=False):
+            seen.clear()
+            anim.animate_to(
+                0.0,
+                duration_ms=120,
+                start_from=1.0,
+                on_value=seen.append,
+                on_done=lambda: done_calls.append(1),
+            )
+            before_stop = len(seen)
+            anim.stop_silent(1.0)
+            self.assertEqual(len(seen), before_stop)
+            self.assertEqual(done_calls, [])
+            self.assertEqual(anim.current_float, 1.0)
+
+        with patch("ui.motion.prefers_reduced_motion", return_value=True):
+            done_calls.clear()
+            anim.animate_to(
+                0.0,
+                duration_ms=120,
+                start_from=1.0,
+                on_done=lambda: done_calls.append(1),
+            )
+            self.assertEqual(done_calls, [1])
+            self.assertEqual(anim.current_float, 0.0)
 
     def test_exif_rotated_jpeg_scaled_decode_and_metadata(self) -> None:
         # 600x300 raw with EXIF orientation 6 (90 deg CW -> display 300x600)
